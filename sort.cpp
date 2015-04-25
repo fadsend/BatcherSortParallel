@@ -81,7 +81,7 @@ bool checkCorrectness(const vector<int>& vec) {
 vector<int> oddEvenMergeSort(const vector<int>& left, const vector<int>& right, int proc1, int proc2) {
 	vector<int> tmp(left.size() + right.size());
 	
-	#pragma omp parallel for num_threads(2)
+	#pragma omp parallel for 
 	for(size_t idx = 0; idx < 2; idx += 1) {
 		for(size_t i = idx, l = idx, r = idx; i < tmp.size(); i += 2) {
 			if (l < left.size() and (r >= right.size() or left[l] <= right[r])) {
@@ -97,6 +97,7 @@ vector<int> oddEvenMergeSort(const vector<int>& left, const vector<int>& right, 
 		tmp[tmp.size() - 1] = max(left[left.size() - 1], right[right.size() - 1]);
 	}
 	
+	#pragma omp parallel for
 	for(size_t i = 1; i < tmp.size() - 1; i += 2) {
 		compareExchange(tmp, i, i + 1);
 	}
@@ -128,10 +129,6 @@ void compareExchangePar(vector<int>& array, int proc1, int proc2) {
 		otherProc = proc1;
 	}
 	
-	/*
-	 * Non-blocking send since lock can occur in case of 
-	 * small number of processes and large array 
-	*/
 	MPI_Isend(&array[0], (int) array.size(), MPI_INT, otherProc, MSG_TAG(thisProc), MPI_COMM_WORLD, &request);
 	MPI_Recv(&arrayFromOtherProc[0], arrayFromOtherProc.size(), MPI_INT, otherProc, MSG_TAG(otherProc), MPI_COMM_WORLD, &status);
 	MPI_Wait(&request, &status);
@@ -150,7 +147,6 @@ void batcherSortPar(vector<int>& chunk) {
         bool check;
         do {
         	check = false;
-			#pragma omp parallel for
             for (int i = 0; i < N - d; i += 1) {
             	if ((i & p) == r and onThisProcs(i, i + d)) {
 					compareExchangePar(chunk, i, i + d);
